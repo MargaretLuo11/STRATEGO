@@ -1,0 +1,72 @@
+export module Display;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+import Player;
+import Tile;
+import xwindow;
+
+using namespace std;
+
+export class Display;
+
+export class Game{
+    vector<Player*> players;
+    vector<vector<Tile*>> board;
+    int turn;
+    bool ongoing;
+    int min_board = 1;
+    int max_board = 8;
+    int server_spot = 4;
+    int other_server_spot = 3;
+    int top_mid = 6;
+    int bot_mid = 2;
+    friend class Display;
+    Display *display1 = nullptr;
+    Display *display2 = nullptr;
+
+    public:
+        Game(string ability1, string ability2, string links1, string links2);
+        ~Game();
+        void printgame();
+        Player* get_player(int num_player);
+        bool move(string name, string dir);
+        int get_turn();
+        void player_downloading(Player* player, Link* link);
+        void switch_turn();
+        Link* battle(Link* link1, Link* link2);
+        void check_firewall(Tile* tile, Link* link);
+        bool use_ability(istringstream& command);
+        void Jumble();
+        bool Teleport(string link_name, int col, int row);
+        bool Revive(Player* owner, Link* link);
+        void play_game(istream &in, bool file);
+        bool scan(string name);
+        string winner();
+        int getRandom();
+        //begining board, setting up the graphics
+        void setGraphics(Display *d1, Display *d2);
+        //for graphic changes
+        void notifyGraphics();
+        //this optimizes the process, so we dont need to reprint the board every time
+        void notifyGraphics(int row, int col);
+};
+
+export class Display{
+    Xwindow w;
+    static const int cellSize = 45;
+    int perspective; //1 for p1, 2 for p2
+
+public:
+    Display(int perspective): w(8 * cellSize, 8 * cellSize), perspective{perspective} {}
+    void drawBoard(const Game& g);
+    void drawTile(const Game& g, int row, int col);//so we don;t need to reprint board every time
+
+};
+
