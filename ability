@@ -1,0 +1,16 @@
+export module Ability;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+
+using namespace std;
+
+export struct Ability{
+    string name;
+    bool used; 
+    Ability(string name, bool used): name{name}, used{used}{}
+};
