@@ -1,0 +1,31 @@
+export module Tile;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+import Player;
+
+using namespace std;
+
+
+export class Tile{
+    Link* who;
+    char default_char;
+    bool isServer;
+
+    public:
+        Tile(Link* who, char default_char, bool isServer): who{who}, default_char{default_char}, isServer{isServer} {}
+        bool get_is_server();
+        Link* get_who();
+        char get_default_char();
+
+        void set_who(Link* w);
+        void clear();
+        void use_firewall(int player);
+        
+};
