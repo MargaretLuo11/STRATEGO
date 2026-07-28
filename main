@@ -1,0 +1,55 @@
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+import Player;
+import Tile;
+import Display;
+
+using namespace std;
+
+int main(int argc, char* argv[]){
+    string p1_abilities_list = "LFDSP";
+    string p2_abilities_list = "LFDSP";
+    string p1_link_order = "V1V2V3V4D1D2D3D4";
+    string p2_link_order = "V1V2V3V4D1D2D3D4";
+    bool graphics = false;
+
+    for(int i = 1; i < argc; ++i){
+        string arg = argv[i];
+
+        if(arg == "-ability1"){
+            ++i;
+            p1_abilities_list = argv[i];
+        }
+        else if(arg == "-ability2"){
+            ++i;
+            p2_abilities_list = argv[i];
+        }
+        else if(arg == "-link1"){
+            ++i;
+            p1_link_order = argv[i];
+        }
+        else if(arg == "-link2"){
+            ++i;
+            p2_link_order = argv[i];
+        }
+        else if(arg == "-graphics"){
+            graphics = true;
+        }
+    }
+
+    Game new_game(p1_abilities_list, p2_abilities_list, p1_link_order, p2_link_order);
+    Display display1{1};
+    Display display2{2};
+    if(graphics){
+        //setting the display pointer to not be null = we know to turn on graphics going forward
+        new_game.setGraphics(&display1,&display2);
+    }
+    new_game.printgame();
+    new_game.play_game(cin,false);
+}
