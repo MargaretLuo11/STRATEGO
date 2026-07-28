@@ -1,0 +1,41 @@
+module Tile;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+import Player;
+
+using namespace std;
+
+bool Tile::get_is_server(){
+    return isServer;
+}
+
+char Tile::get_default_char(){
+    return default_char;
+}
+
+void Tile::use_firewall(int player){
+    if (player == 1) {
+        default_char = 'm';
+    } else {
+        default_char = 'w';
+    }
+}
+
+Link* Tile::get_who(){
+    return who;
+}
+
+void Tile::set_who(Link* w){
+    who = w;
+}
+
+void Tile::clear(){
+    who = nullptr;
+}
