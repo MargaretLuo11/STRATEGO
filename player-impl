@@ -1,0 +1,233 @@
+module Player;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+
+using namespace std;
+
+
+Player::Player(int player_num, string ability_order, string link_order){
+    for(int i = min_known; i < max_known; i++){
+        known_links.push_back(nullptr);
+    }
+
+    this->player_num = player_num;
+    data_downloaded = 0;
+    virus_downloaded = 0;
+    //creating the vector of abilities
+
+    //Randomize, Revive, Teleport, Link_boost, Polarize, Scan, Download, Firewall
+    string ability_name;
+    for(char s: ability_order){
+        //assuming no invalid input is placed here, maybe we will have some sort of safety net in the main
+        if(s == 'J'){
+            ability_name = "Jumble";
+        }
+        else if(s == 'R'){
+            ability_name = "Revive";
+        }
+        else if(s == 'T'){
+            ability_name = "Teleport";
+        }
+        else if(s == 'L'){
+            ability_name = "Link Boost";
+        }
+        else if(s == 'P'){
+            ability_name = "Polarize";
+        }
+        else if(s == 'D'){
+            ability_name = "Download";
+        }
+        else if(s == 'S'){
+            ability_name = "Scan";
+        }
+        else{
+            ability_name = "Firewall";
+        }
+        abilities.push_back(new Ability{ability_name,false});
+    }
+
+    abilities_left = 5;
+
+    //for the links, we need to take 2 at a time cuz it is V1V2V3...or something 
+    //a-h for p1 and A-H for p2 hmmm
+    //deal with default later, 
+    int length = link_order.size() - 1;
+    int index = 0;
+    string type = "";
+    int strength{0};
+    int col;
+    int row;
+
+    
+    if(player_num == 1){
+       for(int i = 0; i < length; i+=2){
+        if(index == 3){
+            col = 3;
+            row = 1;
+        }
+        else if(index == 4){
+            col = 4;
+            row = 1;
+        }
+        else{
+            col = index;
+            row = 0;
+        }
+        type = link_order[i];
+        strength = link_order[i + 1] - '0';
+        char c = 'a'+ index;
+        string name(1, c);
+        links.push_back(new Link(name, player_num, col, row, 0, type, strength, true));
+        ++index;
+       } 
+    }
+    if(player_num == 2){
+        for(int i = 0; i < length; i+=2){
+            if(index == 3){
+                //row and column flipped
+                col = 3;
+                row = 6;
+            }
+            else if(index == 4){
+                col = 4;
+                row = 6;
+            }
+            else{
+                col = index;
+                row = 7;
+            }
+            type = link_order[i];
+            strength = link_order[i + 1] - '0';
+            char c = 'A'+ index;
+            string name(1, c);
+            links.push_back(new Link(name, player_num, col, row, 0, type, strength, true));
+            ++index;
+        }
+    }
+}
+
+vector<Link*>* Player::get_known_links(){
+    return &known_links;
+}
+
+void Player::set_known_links(Link* link, int index){
+    known_links[index] = link;
+}
+
+
+//ex V1, need to know how to seperate, v for virus 1 for strength
+Link* Player::get_Link(string& link_name){
+    //this function is within the correct person
+    string ftype(1, link_name[0]); //type to find
+    int fstrength = link_name[1] - '0';
+    for(Link* l: links){
+        if(ftype == l->get_type() && fstrength == l->get_strength()){
+            return l;
+        } 
+    }
+    return nullptr;
+}
+
+Link* Player::find_link(string name){
+    for(Link* l: links){
+        if(name == l->get_name()){
+            return l;
+        }
+    }
+    return nullptr;
+}
+
+Player::~Player(){
+    for(Ability* a: abilities){
+        delete a;
+    }
+    for(Link* l: links){
+        delete l;
+    }
+}
+
+void Player::decrease_abilities_left(){
+    abilities_left--;
+}
+
+void Player::download_link(Link* link, int index){
+    if (link->get_type() == "D"){
+        data_downloaded++;
+    } 
+    else{
+        virus_downloaded++;
+    }
+    
+    if (link->get_owner() != player_num){
+        known_links[index] = link;
+        cout << endl;
+    }
+
+    cout << "Player " << player_num << " downloaded link " << link->get_name();
+    cout << " (" << link->get_type() << link->get_strength() << ")" << endl;
+}
+
+int Player::find_index(Link* link){
+    int index = 0;
+
+    for(auto iter = links.begin(); iter != links.end(); ++iter){
+        if(*iter == link){
+            return index;
+        } 
+        else{
+            index++;
+        }
+    }
+    return index;
+}
+
+vector<Link*>* Player::get_links(){
+    return &links;
+}
+
+Ability* Player::get_ability(int num){
+    return abilities[num - 1];
+}
+
+void Player::print_abilities(){
+
+    cout << "Abilities: " << endl;
+
+    for(int i = 0; i < abilities.size(); ++i){
+        cout << i+1 << ". ";
+        cout << (abilities[i])->name;
+        if(abilities[i]->used){
+            cout << " - used";
+        }
+        cout << endl;
+    }
+}
+
+int Player::get_data_downloaded(){
+    return data_downloaded;
+}
+void Player::set_data_downloaded(string data){
+    ++data_downloaded;
+    downloaded.push_back(data);
+}
+int Player::get_virus_downloaded(){
+    return virus_downloaded;
+}
+void Player::set_virus_downloaded(string virus){
+    ++virus_downloaded;
+    downloaded.push_back(virus);
+}
+int Player::get_player_num(){
+    return player_num;
+}
+
+int Player::get_abilities_left(){
+    return abilities_left;
+}
