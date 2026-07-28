@@ -1,0 +1,81 @@
+module Link;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+
+using namespace std;
+
+int Link::get_strength(){
+    return strength;
+}
+
+void Link::reset_linkboost(){
+    linkboost = 0;
+}
+
+bool Link::get_alive(){
+    return alive;
+}
+
+string Link::get_name(){
+    return name;
+}
+
+int Link::get_row(){
+    return row;
+}
+
+void Link::set_row(int r){
+    row = r;
+}
+
+void Link::set_col(int c){
+    col = c;
+}
+
+int Link::get_col(){
+    return col;
+}
+
+int Link::get_linkboost(){
+    return linkboost;
+}
+
+void Link::use_polarize(){
+    if (type == "V") {
+        type = "D";
+    }
+    else {
+        type = "V";
+    }
+}
+    
+void Link::use_linkboost(){
+    linkboost++;
+}
+
+void Link::use_teleport(int col_new, int row_new){
+    col = col_new; 
+    row = row_new;
+}
+
+void Link::change_status(){
+    if(alive){
+        alive = false;
+    }
+    else{
+        alive = true;
+    }
+}
+
+int Link::get_owner(){
+    return owner;
+}
+
+string Link::get_type(){
+    return type;
+}
