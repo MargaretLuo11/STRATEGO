@@ -1,0 +1,49 @@
+export module Player;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+
+using namespace std;
+
+
+export class Player{
+    int player_num; //which player
+    vector<Ability*> abilities; //heap allocated
+    int abilities_left; 
+    vector<Link*> links; //heap allocated
+    int data_downloaded; //counter for data downloaded
+    int virus_downloaded; //counter for virus downloaded
+    vector<string> downloaded; // everything downloaded so far
+    vector<Link*> known_links;
+    int max_known = 8;
+    int min_known = 0;
+
+
+    public:
+        ~Player();
+        int get_data_downloaded();
+        void set_data_downloaded(string data);
+        int get_virus_downloaded();
+        void set_virus_downloaded(string virus);
+        int get_player_num();
+        Player(int player_num, string ability_order = "LFDSP", string link_order = "V1V2V3V4D1D2D3D4");
+        Link* get_Link(string& link_name);
+        void download_link(Link* link, int index); //opponent downloaded your D/V
+        int get_abilities_left();
+        void decrease_abilities_left();
+
+        vector<Link*>* get_known_links();
+        Ability* get_ability(int num);
+        vector<Link*>* get_links();
+        void print_abilities();
+        Link* find_link(string name);
+        int find_index(Link* link);
+        void set_known_links(Link* link, int index);
+
+};
