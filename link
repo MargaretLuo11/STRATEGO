@@ -1,0 +1,45 @@
+export module Link;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+
+using namespace std;
+
+export class Link{
+    std::string name;
+    int owner; 
+    int col;
+    int row;
+    int linkboost;
+    std::string type;
+    int strength;
+    bool alive;
+    
+    public:
+        Link(std::string name, int owner, int col, int row, int linkboost, std::string type, int strength, bool alive):
+        name{name}, owner{owner}, col{col}, row{row}, linkboost{linkboost}, type{type}, strength{strength}, alive{alive}{}
+
+        int get_owner();
+        int get_col();
+        int get_row();
+        string get_name();
+
+        std::string get_type();
+
+        int get_strength();
+        bool get_alive();
+        int get_linkboost();
+
+        void use_polarize();
+        void use_linkboost();
+        void use_teleport(int col, int row);
+
+        void change_status();
+        void set_row(int r);
+        void set_col(int c);
+        void reset_linkboost();
+};
