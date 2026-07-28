@@ -1,0 +1,1158 @@
+module Display;
+
+import <iostream>;
+import <vector>;
+import <string>;
+import <sstream>;
+import <random>;
+import <fstream>;
+import Link;
+import Ability;
+import Player;
+import Tile;
+import xwindow;
+
+using namespace std;
+
+
+Game::Game(string ability1, string ability2, string links1, string links2) {
+    turn = 1;
+    ongoing = true;
+
+    players.push_back(new Player(1, ability1, links1));
+    players.push_back(new Player(2, ability2, links2));
+
+    board.resize(max_board);
+
+    for(int i = (min_board - 1); i < max_board; i++){
+        if(i == server_spot || i == other_server_spot){
+            board[0].push_back(new Tile(nullptr, 'S', true));
+        } 
+        else{
+            board[0].push_back(new Tile((*players[0]->get_links())[i], '.', false));
+        }
+    }
+
+    for(int i = (min_board - 1); i < max_board; i++){
+        if(i == server_spot || i == other_server_spot){
+            board[1].push_back(new Tile((*players[0]->get_links())[i], '.', false));
+        } 
+        else{
+            board[1].push_back(new Tile(nullptr, '.', false));
+        }
+    }
+    for(int j = bot_mid; j < top_mid; j++){
+        for(int i = (min_board - 1); i < max_board; i++){
+            board[j].push_back(new Tile(nullptr, '.', false));
+        }
+    }
+
+    for(int i = (min_board - 1); i < max_board; i++){
+        if(i == server_spot || i == other_server_spot){
+            board[6].push_back(new Tile((*players[1]->get_links())[i], '.', false));
+        } 
+        else{
+            board[6].push_back(new Tile(nullptr, '.', false));
+        }
+    }
+
+    for(int i = (min_board - 1); i < max_board; i++){
+        if(i == server_spot || i == other_server_spot){
+            board[7].push_back(new Tile(nullptr, 'S', true));
+        } 
+        else{
+            board[7].push_back(new Tile((*players[1]->get_links())[i], '.', false));
+        }
+    }
+}
+
+void Game::Jumble(){
+    auto player1_links = players[0]->get_links();
+    auto player2_links = players[1]->get_links();
+    for(Link* l: *player1_links){
+        while(true){
+            int new_col = getRandom();
+            int new_row = getRandom();
+        //check if this is an empty spot 
+            Tile* potential_move = board[new_row][new_col];
+        //if the tile is empty, move it there, else redo the process
+            if(!(potential_move->get_who()) && potential_move->get_default_char() == '.' && !potential_move->get_is_server()){
+                //clear current tile, update new tile, update link coord
+                board[l->get_row()][l->get_col()]->clear();
+                potential_move->set_who(l);
+                l->set_row(new_row);
+                l->set_col(new_col);
+                break;
+            }
+        }       
+    }
+    for(Link* m: *player2_links){
+        while(true){
+            int new_col2 = getRandom();
+            int new_row2 = getRandom();
+            Tile* potential_move2 = board[new_row2][new_col2];
+            if(!(potential_move2->get_who()) && potential_move2->get_default_char() == '.' && !potential_move2->get_is_server()){
+                board[m->get_row()][m->get_col()]->clear();
+                potential_move2->set_who(m);
+                m->set_row(new_row2);
+                m->set_col(new_col2);
+                break;
+            }
+        }      
+    }
+    notifyGraphics();
+}
+
+int Game::getRandom(){
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<int> dist((min_board - 1), (max_board - 1));
+    int x = dist(gen);
+    return x;
+}
+
+bool Game::Teleport(string link_name, int col, int row){
+    //check if it is out of bounds 
+    if(col < (min_board - 1) || col > (max_board - 1)){
+        cout << "position given is out of bounds" << endl;
+        return false;
+    }
+    if(row < (min_board - 1) || row > (max_board - 1)){
+        cout << "position given is out of bounds" << endl;
+        return false;
+    }
+//need to check if it is empty
+    Link* this_link = players[turn - 1]->find_link(link_name);
+    Tile* suggested_move = board[row][col];
+    if(suggested_move->get_default_char() == '.' &&!suggested_move->get_who()){
+        int old_row = this_link->get_row();
+        int old_col = this_link->get_col();
+        board[this_link->get_row()][this_link->get_col()]->clear();
+        suggested_move->set_who(this_link);
+        this_link->use_teleport(col, row);
+        cout << "whoosh whoosh~~successful teleport" << endl;
+        notifyGraphics(old_row,old_col);
+        notifyGraphics(row,col);
+        return true;
+    }
+    cout << "you can't move there nuh uh " << endl;
+    return false;
+}
+
+
+
+void Game::printgame(){
+
+    int other_player;
+
+    if(turn == 1){
+        other_player = 2;
+    } 
+    else{
+        other_player = 1;
+    }
+    cout << endl;
+    cout << "Player " << turn << ":" << endl;
+    cout << "Downloaded: " << players[turn - 1]->get_data_downloaded()<< "D";
+    cout << ", " << players[turn - 1]->get_virus_downloaded() << "V" << endl;
+    cout << "Abilities: " << players[turn - 1]->get_abilities_left() << endl;
+    vector<Link*> &links = *players[turn - 1]->get_links();
+    int i = 0;
+    for(auto it = links.begin(); it != links.end(); ++it){
+
+        Link* link = *it;
+
+        cout << link->get_name() << ": " << link->get_type() << link->get_strength();
+
+        i++;
+
+        if(i == 4){
+            cout << endl;
+        } 
+        else{
+            cout << "    ";
+        }
+    }
+    cout << endl;
+    cout << "========" << endl;
+
+    if(turn == 1){
+        for(auto i = board.begin(); i != board.end(); ++i){
+            for(auto j = (*i).begin(); j != (*i).end(); ++j){
+                Tile* tile = *j;
+                if(tile->get_is_server()){
+                    cout << "S";
+                } 
+                else if(tile->get_who()){
+                    cout << tile->get_who()->get_name();
+                //default_char is a string that shows what the tile would be
+                //if it doesn't have any links on it
+                } 
+                else{
+                    cout << tile->get_default_char();
+                }
+            }
+
+            cout << endl;
+        }
+    } 
+    else{
+        for(auto i = board.rbegin(); i != board.rend(); ++i){
+            for(auto j = i->rbegin(); j != i->rend(); ++j){
+                Tile* tile = *j;
+                if(tile->get_is_server()){
+                    cout << "S";
+                } 
+                else if(tile->get_who()){
+                    cout << tile->get_who()->get_name();
+                //default is a string that shows what the tile would be
+                //if it doesn't have any links on it
+                } 
+                else{
+                    cout << tile->get_default_char();
+                }
+            }
+
+            cout << endl;
+            if(display1 && display2){//could just check one cuz it's BOGO, but it doesn't hurt
+                notifyGraphics();
+            }
+        }
+    }
+//known_links is a vector<Link*> that shows what we know
+//about the other guys links
+
+    cout << "========" << endl;
+    cout << "Player " << other_player << ":" << endl;
+    cout << "Downloaded: " << players[other_player - 1]->get_data_downloaded() << "D";
+    cout << ", " << players[other_player - 1]->get_virus_downloaded() << "V" << endl;
+    cout << "Abilities: " << players[other_player - 1]->get_abilities_left() << endl;
+    vector<Link*> &known_links = *players[turn - 1]->get_known_links();
+    vector<Link*> &other_links = *players[other_player - 1]->get_links();
+
+    i = 0;
+    auto it1 = other_links.begin();
+    for(auto it = known_links.begin(); it != known_links.end(); ++it){
+
+        Link* known_link = *it;
+        Link* other_link = *it1;
+
+        cout << (other_link)->get_name() << ": ";
+
+
+        
+        if(known_link){
+            cout << known_link->get_type() << known_link->get_strength();
+        } 
+        else{
+            cout << "?";
+        }
+
+        i++;
+        ++it1;
+
+        if(i == 4){
+            cout << endl;
+        } 
+        else{
+            cout << "    ";
+        }
+    }
+
+    cout << endl;
+    cout << endl;
+}
+
+Player* Game::get_player(int num_player){
+    return players[num_player-1];
+}
+
+int Game::get_turn(){
+    return turn;
+}
+
+//it downloads the link by setting its status, changing the player info to match
+//it also clear the tile the link is currently on
+
+void Game::player_downloading(Player* player, Link* link){
+    int owner = link->get_owner();
+    int index = players[owner - 1]->find_index(link);
+
+    player->download_link(link, index);
+    int row = link->get_row();
+    int col = link->get_col();
+
+    board[row][col]->clear();
+
+    link->change_status();
+    notifyGraphics(row,col);
+
+
+}
+
+void Game::switch_turn(){
+    if(turn == 1){
+        turn = 2;
+    } 
+    else{
+        turn = 1;
+    }
+}
+// battle returns loser
+Link* Game::battle(Link* link1, Link* link2){
+    if(link1->get_strength() >= link2->get_strength()){
+        return link2;
+    }
+    else{
+        return link1;
+    }
+}
+
+//for now assume m is player 1 firewall and w is player 2 firewall
+void Game::check_firewall(Tile* tile, Link* link){
+
+    int owner = link->get_owner();
+    int other_player;
+
+    if(turn == 1){
+        other_player = 2;
+    } 
+    else{
+        other_player = 1;
+    }
+
+    if((owner == 1 && tile->get_default_char() == 'w') ||
+            (owner == 2 && tile->get_default_char() == 'm')){
+
+        cout << link->get_name() << " stepped on a firewall!" << endl;
+        cout << "It was of type " << link->get_type() << link->get_strength() << endl;
+        
+        if(link->get_type() == "V") {
+            cout << "automatically downloading..." << endl;
+            player_downloading(players[owner - 1], link);
+        } 
+        else{
+
+            int index = players[owner - 1]->find_index(link);
+            
+            players[other_player - 1]->set_known_links(link, index);
+
+        }
+    }
+}
+
+bool Game::move(string name, string dir){
+    Link* link = players[turn - 1]->find_link(name);
+
+    if(link == nullptr){
+        cout << "Invalid link" << endl;
+        return false;
+    }
+
+
+    int num_steps = 1;
+
+    if(link->get_linkboost() > 0){
+        num_steps += link->get_linkboost();
+    }
+    
+    if(!link->get_alive()){
+        cout << "Link is already downloaded" << endl;
+        return false;
+    }
+
+    int old_row = link->get_row();
+    int old_col = link->get_col();
+
+    int row = old_row;
+    int col = old_col;
+
+    if(dir == "up"){
+        if (turn == 1) {
+            row -= num_steps;
+        } else {
+            row += num_steps;
+        }
+    } 
+    else if(dir == "down"){
+        if(turn == 1){
+            row += num_steps;
+        } 
+        else{
+            row -= num_steps;
+        }
+    } 
+    else if(dir == "left"){
+        if(turn == 1){
+            col  -= num_steps;
+        } 
+        else{
+            col  += num_steps;
+        }
+    } 
+    else if(dir == "right"){
+        if(turn == 1){
+            col += num_steps;
+        }
+        else{
+            col -= num_steps;
+        }
+    } 
+    else{
+        cout << "Invalid direction" << endl;
+        return false;
+    }
+
+    if(col >= max_board || col < (min_board - 1)){
+        cout << "Out of bounds" << endl;
+        return false;
+    }
+
+    if(turn == 1){
+        if(row < (min_board - 1)){
+            cout << "Out of bounds" << endl;
+            return false;
+        } 
+        else if(row >= max_board){
+            player_downloading(players[turn - 1], link);
+            switch_turn();
+            return true;
+        }
+    } 
+    else if(turn == 2){
+        if(row >= max_board){
+            cout << "Out of bounds" << endl;
+            return false;
+        } 
+        else if(row < (min_board - 1)) {
+            player_downloading(players[turn - 1], link);
+            switch_turn();
+            return true;
+        }
+    }
+//assumed that you can't step on your own server ports
+    if(turn == 1 && row == (min_board - 1) && (col == other_server_spot || col == server_spot)){
+        cout << "Server port in the way" << endl;
+        return false; 
+    } 
+    else if(turn == 2 && row == (max_board - 1) && (col == other_server_spot || col == server_spot)){
+        cout << "Server port in the way" << endl;
+        return false;
+    } 
+    else if(turn == 1 && row == (max_board - 1) && (col == other_server_spot || col == server_spot)){
+        player_downloading(players[1], link);
+        switch_turn();
+        return true;
+    } 
+    else if(turn == 2 && row == (min_board - 1) && (col == other_server_spot || col == server_spot)){
+        player_downloading(players[0], link);
+        switch_turn();
+        return true;
+    }
+
+    Tile* tile = board[row][col];
+
+    if(tile->get_who() != nullptr){
+        if((tile->get_who())->get_owner() == turn){
+            cout << "Link blocked" << endl;
+            return false;
+        } 
+        else{
+            Link* loser = battle(link, tile->get_who());
+
+            if(loser->get_owner() == 1){
+                player_downloading(players[1], loser);
+            } 
+            else{
+                player_downloading(players[0], loser);
+            }
+
+            if(loser->get_owner() != turn){
+
+                board[old_row][old_col]->clear();
+
+                (*link).set_row(row);
+                (*link).set_col(col);
+
+                tile->set_who(link);
+
+                check_firewall(tile, link);
+
+            }
+            notifyGraphics(old_row,old_col);
+
+            switch_turn();
+
+            return true;
+        }
+    }
+
+    board[old_row][old_col]->clear();
+
+    (*link).set_row(row);
+    (*link).set_col(col);
+
+    tile->set_who(link);
+
+    check_firewall(tile, link);
+    notifyGraphics(old_row,old_col);
+    notifyGraphics(row,col);
+    switch_turn();
+
+    return true;
+    
+}
+
+bool Game::scan(string name) {
+    int index;
+
+    int other_player = 1;
+
+    if(turn != 2){
+        other_player = 2;
+    }
+ 
+    for(int i = (min_board - 1); i < max_board; ++i){
+        for(int j = (min_board - 1); j < max_board; ++j){
+            if (((board[i])[j])->get_who() != nullptr){
+                if((((board[i])[j])->get_who())->get_name() == name){
+                    if((((board[i])[j])->get_who())->get_owner() == turn){
+                        cout << "invalid" << endl;
+                        return false;
+                    }
+                    else{
+                        cout << "Revealing " << name << ": ";
+                        cout << ((((board[i])[j])->get_who())->get_strength()); 
+                        cout << ((((board[i])[j])->get_who())->get_type()) << endl;
+                        index = (players[other_player-1])->find_index((((board[i])[j])->get_who()));
+                        (players[turn-1])->set_known_links((((board[i])[j])->get_who()), index);
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    cout << "Invalid" << endl;
+    return false;
+}
+
+bool Game::Revive(Player* owner, Link* link){
+    int col = owner->find_index(link);
+    int row;
+
+    if(owner->get_player_num() == 1){
+        row = 0;
+        if(col == 3 || col == 4){
+            row = 1;
+        }
+    }
+
+    if(owner->get_player_num() == 2){
+        row = 7;
+        if(col == 3 || col == 4){
+            row = 6;
+        }
+    }
+
+    if(board[row][col]->get_who()){
+        cout << "Can't revive, orignal tile is not empty" << endl;
+        return false;
+    }
+
+    link->reset_linkboost();
+    link->change_status();
+    link->use_teleport(col, row);
+    board[row][col]->set_who(link);
+    notifyGraphics(row,col);
+
+    return true;
+
+}
+
+
+bool Game::use_ability(istringstream& command){
+
+    int n;
+
+    if(!(command >> n)){
+        if(command.eof()){
+            cout << "Wrong number of arguments" << endl;
+        } 
+        else{
+            cout << "Wrong arguments" << endl;
+        }
+
+        command.clear();
+        return false;
+        
+    }
+
+    if(n < 1 || n > 5){
+        cout << "Invalid ability" << endl;
+        return false;
+    }
+
+    Ability* a = (players[turn - 1])->get_ability(n);
+
+    if(a->used){
+        cout << "Ability already used" << endl;
+        return false;
+    }
+
+    string link_name;
+    int other_player;
+    int row;
+    int col;
+    Link* link;
+    Tile* tile;
+
+    if(turn == 1){
+        other_player = 2;
+    } 
+    else{
+        other_player = 1;
+    }
+
+    if(a->name == "Link Boost"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        link = players[turn - 1]->find_link(link_name);
+
+        if(!link){
+            cout << "Link does not exist" << endl;
+            return false;
+        }
+
+        if(!link->get_alive()){
+            cout << "Link has already been downloaded" << endl;
+            return false;
+        }
+
+        link->use_linkboost();
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+
+        return true;
+
+
+    } 
+    else if(a->name == "Firewall"){
+
+        if(!(command >> col)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+        if(!(command >> row)){
+            if (command.eof()) {
+                cout << "Wrong number of arguments" << endl;
+            } else {
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        
+
+        if(row < min_board || row > max_board || col < min_board || col > max_board ){
+            cout << "Out of bounds" << endl;
+            return false;
+        }
+
+        tile = board[row - 1][col - 1];
+
+
+        if(tile->get_is_server()){
+            cout << "Tile is a server port" << endl;
+            return false;
+        }
+
+        if(tile->get_who()){
+            cout << "Tile is not empty" << endl;
+            return false;
+        }
+
+        if(tile->get_default_char() != '.'){
+            cout << "Tile already has firewall" << endl;
+            return false;
+        }
+
+        tile->use_firewall(turn);
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+
+        return true;
+
+
+    } 
+    else if(a->name == "Download"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+            command.clear();
+            return false;
+        }
+
+        link = players[other_player - 1]->find_link(link_name);
+
+        if(!link){
+            cout << "Link does not exist" << endl;
+            return false;
+        }
+
+        if(!link->get_alive()){
+            cout << "Link has already been downloaded" << endl;
+            return false;
+        }
+
+        player_downloading(players[turn - 1], link);
+
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+
+        return true;
+        
+    } 
+    else if(a->name == "Polarize"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        link = players[turn - 1]->find_link(link_name);
+
+        if(!link){
+            link = players[other_player - 1]->find_link(link_name);
+            if(!link){
+                cout << "Link does not exists" << endl;
+                return false;
+            }
+        }
+
+        if(!link->get_alive()){
+            cout << "Link has already been downloaded" << endl;
+            return false;
+        }
+
+        link->use_polarize();
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+        return true;
+        
+    } 
+    else if(a->name == "Scan"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        if(!scan(link_name)){
+            return false;
+        }
+
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+        return true;
+        
+        
+    } 
+    else if(a->name == "Revive"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        link = players[turn - 1]->find_link(link_name);
+
+        if(!link){
+            cout << "Link does not exist" << endl;
+            return false;
+        }
+
+        if(link->get_alive()){
+            cout << "Link is alive" << endl;
+            return false;
+        }
+
+        if(!Revive(players[turn-1], link)){
+            return false;
+        }
+
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+        return true;
+
+
+        
+    } 
+    else if(a->name == "Teleport"){
+
+        if(!(command >> link_name)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+            command.clear();
+            return false;
+        }
+
+        if(!(command >> col)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        if(!(command >> row)){
+            if(command.eof()){
+                cout << "Wrong number of arguments" << endl;
+            } 
+            else{
+                cout << "Wrong arguments" << endl;
+            }
+
+            command.clear();
+            return false;
+        }
+
+        link = players[turn - 1]->find_link(link_name);
+
+        if(!link){
+            cout << "Link does not exist" << endl;
+            return false;
+        }
+
+        if(!link->get_alive()){
+            cout << "Link has already been downloaded" << endl;
+            return false;
+        }
+
+
+        if(Teleport(link_name, col - 1, row - 1)) {
+            a->used = true;
+            players[turn - 1]->decrease_abilities_left();
+            return true;
+        }
+        
+        return false;
+        
+    } 
+    else if(a->name == "Jumble"){
+        Jumble();
+
+        a->used = true;
+        players[turn - 1]->decrease_abilities_left();
+        return true;
+    }
+
+    cout << "Ability did not work" << endl;
+
+    return false;
+    
+}
+
+string Game::winner() {
+    string winner;
+    if(players[0]->get_data_downloaded() >= 4){
+        winner = "player 1"; 
+    } 
+    else if(players[0]->get_virus_downloaded() >= 4){
+        winner = "player 2";
+    } 
+    else if(players[1]->get_data_downloaded() >= 4){
+        winner = "player 2";
+    } 
+    else if(players[1]->get_virus_downloaded() >= 4){
+        winner = "player 1";
+    } 
+    else{
+        winner = "ongoing";
+    }
+
+    return winner;
+}
+
+void Game::play_game(istream &in, bool file) {
+    string command;
+    string dir;
+    string name;
+    string line;
+    istringstream input;
+    bool used_ability = false;
+
+    if(display1) {
+        notifyGraphics();
+        }
+
+    while(true) {
+        if(!file){
+            cout << "Please enter a command: ";
+        }
+
+        if(!getline(in, line)){
+            break;
+        }
+        
+
+        input.clear();       // clear error flags
+        input.str(line);
+
+        input >> command;
+
+        if(command == "move"){
+            input >> name;
+            input >> dir;
+
+            if(move(name, dir)){
+
+                used_ability = false;
+                
+            }
+
+        }
+        else if(command == "ability"){ 
+            if(used_ability){
+                cout << "Already used an ability this turn" << endl;
+            } 
+            else if(use_ability(input)){
+               used_ability = true;
+            };
+        }
+        //board, quit, sequence 
+        //abilities, print abilities 
+        else if(command == "abilities"){
+            players[turn - 1]->print_abilities();
+        }
+        else if(command == "board"){
+            printgame();
+        }                                 
+        else if(command == "quit"){
+            cout << endl;
+            cout << endl;
+            printgame();
+            cout << "game quitted" << endl;
+            ongoing = false;
+            break;
+        }
+        else if(command == "sequence"){
+            string filename;
+            input >> filename;
+            ifstream file{filename};
+
+            if(!file){
+                cout << "File could not be opened" << endl;
+                continue;
+            }
+            else{
+                play_game(file, true);
+                if (!ongoing) {
+                    break;
+                }
+            }
+        }
+        else{
+            cout << "Unknown command: "<< command << endl;
+        }
+
+        if(winner() == "player 1" && ongoing){
+            ongoing = false;
+            cout << endl;
+            cout << endl;
+            printgame();
+            cout << "Player 1 wins!!!" << endl;
+            break;
+        } 
+        else if(winner() == "player 2"&& ongoing){
+            ongoing = false;
+            cout << endl;
+            cout << endl;
+            printgame();
+            cout << "Player 2 wins!!!" << endl;
+            break;
+        }
+    }
+}
+
+Game::~Game() {
+    for(int i = 0; i < players.size(); ++i){
+        delete players[i];
+    }
+
+    for(int j = (min_board - 1); j < board.size(); ++j){
+        for (int k = (min_board - 1); k < (board[j]).size(); ++k) {
+            delete (board[j])[k];
+        }
+    }
+}
+
+void Game::setGraphics(Display *d1, Display *d2){
+    display1 = d1;
+    display2 = d2;
+}
+
+void Game::notifyGraphics(){
+    //cerr <<"DEBUG notifyGRaphics entered display =" << display << endl;
+    if(display1 && display2){
+        display1->drawBoard(*this);
+        display2->drawBoard(*this);
+    }
+}
+
+void Game::notifyGraphics(int row, int col){
+  if(display1 && display2){
+        display1->drawTile(*this, row, col);
+        display2->drawTile(*this, row, col);
+    }
+}
+void Display::drawBoard(const Game& g){
+    for(int row = 0; row < 8; ++row){
+        for(int col = 0; col < 8; ++col){
+            //coord with size accounted for --> where it actually is (1,2) would actually be at (50,100)
+            int boardRow;
+            int boardCol;
+            int screenRow;
+            int screenCol;
+            if(perspective == 1){
+                boardRow = row;
+                boardCol = col;
+                screenRow = row;
+                screenCol = col;
+            }
+            else{
+                //rotated perspective for p2
+                boardRow = row;
+                boardCol = col;
+                screenRow = 7 - row; //magic numbers here, deal with it later
+                screenCol = 7 - col;
+            }
+            int y = screenRow * cellSize;
+            int x = screenCol * cellSize;
+            Tile *tile = g.board[boardRow][boardCol]; 
+            w.fillRectangle(x,y,cellSize,cellSize,Xwindow::White);
+            char character = tile->get_default_char();
+            if(tile->get_is_server()){
+                character = 'S';
+            }
+            //check if occupied
+            //p1 tile = red, p2 tile = blue, unoccupied = white
+            auto occupied = tile->get_who();
+            if(character == 'S'){
+                w.fillRectangle(x,y,cellSize,cellSize,Xwindow::Green);
+            }
+            else if(occupied){
+                character = occupied->get_name()[0];
+                int owner = occupied->get_owner();
+                if(owner == 1){
+                    w.fillRectangle(x, y, cellSize, cellSize, Xwindow::Red);
+                }                                                                       
+                else{
+                    w.fillRectangle(x, y, cellSize, cellSize, Xwindow::Blue);
+                }
+            }
+            //w.fillRectangle(x, y, cellSize, cellSize, Xwindow::White);
+            string str(1,character); 
+            int str_x = x + cellSize/3;
+            int str_y = y + cellSize/3;
+            //make thicker text
+            w.drawString(str_x, str_y, str);
+            w.drawString(str_x + 1, str_y, str);
+            w.drawString(str_x, str_y + 1, str);
+        }
+    }
+}
+
+void Display::drawTile(const Game& g, int row, int col){
+    int screenRow;
+    int screenCol;
+    if(perspective == 1){
+        screenRow = row;
+        screenCol = col;
+    }
+    else{
+        screenRow = 7 - row;
+        screenCol = 7 - col;
+    }
+    int y = screenRow * cellSize;
+    int x = screenCol * cellSize;
+    Tile *tile = g.board[row][col];
+    int colour = Xwindow::White;
+    char character = tile->get_default_char();
+   if(tile->get_is_server()){
+        colour = Xwindow::Green;
+        character = 'S';
+    }
+    auto occupied = tile->get_who();
+    if(occupied){
+        character = occupied->get_name()[0];
+        int owner = occupied->get_owner();
+        if (owner == 1) {
+            colour = Xwindow::Red;
+        } else {
+            colour = Xwindow::Blue;
+        }
+    }
+    w.fillRectangle(x, y, cellSize, cellSize, colour);
+    string str(1, character);
+     int str_x = x + cellSize/3;
+     int str_y = y + cellSize/3;
+            //make thicker text
+     w.drawString(str_x, str_y, str);
+     w.drawString(str_x + 1, str_y, str);
+     w.drawString(str_x, str_y + 1, str);
+}
+
